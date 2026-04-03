@@ -1,0 +1,124 @@
+# ------------------------------
+# OS / File explorer noise
+# ------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------
+# Editor / IDE
+# ------------------------------
+.vscode/
+.idea/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ------------------------------
+# Python bytecode and caches
+# ------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.nox/
+.tox/
+
+# ------------------------------
+# Virtual environments
+# ------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# ------------------------------
+# Build / packaging
+# ------------------------------
+build/
+dist/
+site/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ------------------------------
+# Logs / runtime files
+# ------------------------------
+*.log
+*.out
+*.err
+*.pid
+*.seed
+
+# ------------------------------
+# Jupyter / notebooks
+# ------------------------------
+.ipynb_checkpoints/
+
+# ------------------------------
+# Test / coverage artifacts
+# ------------------------------
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+
+# ------------------------------
+# Environment / local config
+# ------------------------------
+.env
+.env.*
+*.local
+
+# ------------------------------
+# Common temporary folders
+# ------------------------------
+tmp/
+temp/
+outputs/
+artifacts/
+results/
+logs/
+
+# ------------------------------
+# LaTeX build artifacts (report)
+# Keep report/main.tex tracked
+# ------------------------------
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.glg
+report/*.glo
+report/*.gls
+report/*.idx
+report/*.ilg
+report/*.ind
+report/*.lof
+report/*.log
+report/*.lot
+report/*.out
+report/*.run.xml
+report/*.synctex.gz
+report/*.toc
+report/*.xdv
+report/*.pdf
+
+# ------------------------------
+# Optional generated data folders
+# Uncomment if needed
+# ------------------------------
+# data/raw/
+# data/interim/
+# data/processed/
+data/

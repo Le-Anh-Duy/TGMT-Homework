@@ -1,0 +1,4 @@
+Progress:
+	- xong baseline + metrics trên tập test
+	-> lưu lại metrics và kết quả
+	-> nêu lý do cải tiến, và cơ sở cải tiến, có phù hợp hay không

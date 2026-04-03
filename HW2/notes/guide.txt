@@ -1,0 +1,325 @@
+Hiểu rồi. Bài này là **tự code ANN bằng PyTorch**, dùng các tập **MNIST Handwritten, Fashion MNIST, PneumoniaMNIST**, rồi **phân tích kết quả của ANN gốc** và **đề xuất/cài cải tiến** để tăng hiệu quả. PDF bạn gửi trước là báo cáo EDA cho 3 tập này, có sẵn nhiều insight rất hữu ích để dẫn hướng thiết kế ANN, như: Digit/Fashion cân bằng lớp, còn PneumoniaMNIST mất cân bằng rõ; dữ liệu pneumonia thiên về texture hơn là shape; và có outlier sáng/tối cần lưu ý tiền xử lý. 
+
+Mình gợi ý bạn nên triển khai theo hướng này:
+
+## 1. Xác định đúng phạm vi bài
+
+Đây là **ANN thuần** chứ không phải CNN. Nghĩa là đầu vào thường sẽ là:
+
+* ảnh 28x28
+* làm phẳng thành vector 784 chiều
+* đưa qua các fully connected layers
+* có activation
+* có loss
+* train để phân loại
+
+Vậy baseline hợp lý nhất là:
+
+* Input: 784
+* Hidden 1: 256
+* Hidden 2: 128
+* Output:
+
+  * 10 lớp cho Digit MNIST
+  * 10 lớp cho Fashion MNIST
+  * 2 lớp cho PneumoniaMNIST
+
+Activation:
+
+* ReLU là lựa chọn an toàn nhất để baseline
+
+Loss:
+
+* `CrossEntropyLoss` cho cả 3 bài toán
+* riêng PneumoniaMNIST có thể cân nhắc class weight vì mất cân bằng lớp theo EDA của bạn 
+
+---
+
+## 2. Baseline ANN nên làm thế nào
+
+Bạn nên có **một ANN gốc thống nhất** cho cả 3 tập, chỉ thay output dimension.
+
+Ví dụ cấu trúc:
+
+* Flatten
+* Linear(784, 256)
+* ReLU
+* Linear(256, 128)
+* ReLU
+* Linear(128, num_classes)
+
+Có thể thêm:
+
+* Dropout(0.2 hoặc 0.3) sau hidden layers nếu muốn giảm overfitting
+* nhưng nếu bài yêu cầu “ANN gốc, không cải tiến” thì baseline đầu tiên nên chưa thêm nhiều thứ
+
+Các siêu tham số ban đầu:
+
+* optimizer: Adam
+* lr = 1e-3
+* batch size = 64 hoặc 128
+* epochs = 15–30
+
+Nên log:
+
+* train loss
+* train accuracy
+* val/test accuracy
+* confusion matrix
+* precision / recall / F1
+* riêng Pneumonia nên có thêm recall cho lớp bệnh
+
+---
+
+## 3. Preprocess nên làm gì
+
+Vì đề cho phép preprocess input để tạo feature, bạn nên chia thành **2 tầng**:
+
+### A. Preprocess baseline
+
+Dùng cho ANN gốc:
+
+* chuẩn hóa pixel về [0,1]
+* flatten ảnh thành vector 784
+* convert label về kiểu phù hợp
+
+### B. Preprocess cải tiến
+
+Dùng cho các mô hình cải tiến:
+
+* standardization theo mean/std
+* thresholding hoặc contrast enhancement
+* feature engineering bằng OpenCV / numpy
+
+Với từng tập:
+
+* **Digit MNIST**: dữ liệu khá sạch, shape-based, preprocess đơn giản là đủ
+* **Fashion MNIST**: khó hơn Digit vì nhiều lớp hình dạng gần nhau
+* **PneumoniaMNIST**: nên thử contrast enhancement hoặc texture-related feature vì EDA của bạn cho thấy brightness đơn thuần không đủ, texture quan trọng hơn và còn có ảnh quá sáng/quá tối 
+
+---
+
+## 4. Các hướng cải tiến hợp lý
+
+Đề nói có thể cải tiến bằng feature engineering, đổi loss, tăng cường dữ liệu. Bạn không cần làm quá nhiều; chỉ cần 2–3 cải tiến rõ ràng, có lý do, có so sánh trước/sau là đủ.
+
+### Hướng 1: Feature engineering
+
+Đây là hướng hợp với ANN nhất.
+
+Bạn có thể thử:
+
+* ảnh gốc flatten
+* ảnh sau Canny edge flatten
+* ảnh sau HOG feature
+* nối feature: `[raw pixels ; HOG]`
+
+Gợi ý theo dataset:
+
+* **Digit MNIST**: raw pixel thường đã rất mạnh, HOG có thể giúp nhưng chưa chắc tăng nhiều
+* **Fashion MNIST**: HOG/edge có khả năng hữu ích vì phân biệt theo hình dáng
+* **PneumoniaMNIST**: HOG có thể không mạnh bằng texture feature; bạn có thể thử thêm feature thống kê texture đơn giản như mean, std, entropy, hoặc một số đặc trưng GLCM mức cơ bản nếu tự code được. Điều này bám sát insight EDA của bạn về texture và GLCM. 
+
+### Hướng 2: Đổi loss
+
+* Với Digit/Fashion: vẫn dùng CrossEntropyLoss là hợp lý
+* Với PneumoniaMNIST:
+
+  * `CrossEntropyLoss(weight=...)`
+  * hoặc `BCEWithLogitsLoss(pos_weight=...)` nếu bạn thiết kế output 1 neuron cho binary classification
+
+Đây là cải tiến rất hợp lý vì EDA của bạn cho thấy mất cân bằng lớp ở PneumoniaMNIST. 
+
+### Hướng 3: Data augmentation
+
+Vì là ANN, augmentation nên vừa phải.
+
+* **Digit**:
+
+  * random shift nhẹ
+  * random rotation nhỏ
+* **Fashion**:
+
+  * shift/rotation nhẹ
+* **Pneumonia**:
+
+  * phải rất cẩn thận, không augment quá mạnh
+  * có thể dùng small translation, slight rotation, contrast adjustment nhẹ
+
+Nếu augmentation quá mạnh cho X-ray thì có thể làm sai phân bố dữ liệu.
+
+### Hướng 4: Cải tiến kiến trúc
+
+Dù vẫn là ANN, bạn có thể thử:
+
+* tăng số hidden layer
+* thay ReLU bằng LeakyReLU
+* thêm BatchNorm1d
+* thêm Dropout
+
+Đây là cải tiến dễ làm và dễ phân tích.
+
+---
+
+## 5. Một lộ trình thí nghiệm rất ổn
+
+Để bài không bị rối, bạn nên chạy theo ma trận sau:
+
+### Baseline
+
+* Model A: ANN gốc trên raw pixels
+
+### Cải tiến 1
+
+* Model B: ANN + feature engineering
+
+### Cải tiến 2
+
+* Model C: ANN + loss xử lý imbalance / augmentation / kiến trúc tốt hơn
+
+Cho từng dataset:
+
+* Digit MNIST: A vs B
+* Fashion MNIST: A vs B
+* PneumoniaMNIST: A vs B vs C
+
+Như vậy phần phân tích sẽ rõ:
+
+* tập nào ANN gốc đã tốt
+* tập nào cần feature
+* tập nào cần xử lý imbalance
+* tập nào khó vì bản chất dữ liệu
+
+---
+
+## 6. Bạn nên phân tích kết quả như thế nào
+
+Đây là phần rất quan trọng.
+
+### Với ANN gốc
+
+Bạn nên phân tích:
+
+* accuracy có cao không
+* train/test có lệch nhiều không
+* lớp nào dễ nhầm với lớp nào
+* vì sao lại nhầm
+
+Ví dụ:
+
+* **Digit MNIST**: thường accuracy khá cao; nhầm giữa các chữ số có hình gần nhau
+* **Fashion MNIST**: accuracy thấp hơn vì nhiều lớp có silhouette tương tự
+* **PneumoniaMNIST**: khó hơn vì khác biệt tinh tế, brightness không đủ, texture mới quan trọng, dữ liệu còn imbalance và có outlier 
+
+### Với cải tiến
+
+Bạn không chỉ nói “accuracy tăng”, mà cần nói:
+
+* cải tiến nào tăng tốt nhất
+* tăng ở dataset nào
+* tăng metric nào
+* có đổi trade-off không, ví dụ recall tăng nhưng precision giảm
+
+Đặc biệt với Pneumonia:
+
+* recall lớp bệnh rất quan trọng
+* có thể accuracy tăng ít nhưng recall tăng đáng kể thì vẫn đáng giá
+
+---
+
+## 7. Một cấu trúc báo cáo rất hợp lý
+
+Bạn có thể viết theo form này:
+
+### 1. Giới thiệu
+
+* mục tiêu bài toán
+* 3 dataset
+* ANN là gì
+* vì sao chọn ANN
+
+### 2. Dữ liệu và tiền xử lý
+
+* mô tả 3 tập
+* chuẩn hóa
+* flatten
+* chia train/val/test nếu cần
+* nhắc lại một số insight từ EDA trước đó, nhất là imbalance và texture của PneumoniaMNIST 
+
+### 3. Mô hình baseline
+
+* kiến trúc
+* activation
+* loss
+* optimizer
+* hyperparameters
+
+### 4. Kết quả baseline
+
+* bảng accuracy/loss/F1
+* confusion matrix
+* nhận xét
+
+### 5. Các cải tiến
+
+* cải tiến 1: feature engineering
+* cải tiến 2: weighted loss / augmentation / kiến trúc
+
+### 6. So sánh kết quả
+
+* bảng tổng hợp trước/sau
+* phân tích vì sao cải tiến hiệu quả hay không hiệu quả
+
+### 7. Kết luận
+
+* ANN phù hợp mức nào với từng dataset
+* giới hạn của ANN
+* hướng mở rộng sau này, ví dụ CNN
+
+---
+
+## 8. Một số nhận định trước mà bạn gần như chắc chắn sẽ dùng được
+
+Bạn có thể định hướng phân tích từ bây giờ:
+
+* **Digit MNIST**: ANN gốc có thể đạt tốt vì đặc trưng lớp khá rõ, shape đơn giản
+* **Fashion MNIST**: khó hơn Digit vì nhiều lớp gần nhau về hình dạng
+* **PneumoniaMNIST**: ANN trên raw pixels có thể không mạnh bằng 2 tập kia vì tín hiệu phân biệt tinh tế hơn, thiên về texture, đồng thời dữ liệu còn mất cân bằng và có outlier phơi sáng 
+
+Đây là điểm rất hay vì nó nối trực tiếp từ EDA sang modeling, làm bài của bạn có logic.
+
+---
+
+## 9. Cách làm để không bị “AI code giùm”
+
+Vì đề nhấn mạnh tự code, cách dùng mình hợp lý nhất là:
+
+* nhờ mình giúp **thiết kế pipeline**
+* nhờ mình **giải thích từng thành phần**
+* nhờ mình **soát logic mô hình**
+* nhờ mình **đề xuất thí nghiệm**
+* nhờ mình **phân tích kết quả**
+* còn code thì bạn tự viết
+
+Như vậy vẫn đúng tinh thần môn học.
+
+---
+
+## 10. Đề xuất bộ thí nghiệm tối thiểu đẹp nhất
+
+Nếu muốn vừa đủ mà vẫn mạnh, mình khuyên bạn làm:
+
+* **Baseline**: ANN trên raw pixel cho cả 3 tập
+* **Cải tiến 1**: ANN + HOG feature cho Digit/Fashion
+* **Cải tiến 2**: ANN + weighted loss cho PneumoniaMNIST
+* **Cải tiến 3**: ANN + contrast enhancement hoặc texture/statistical features cho PneumoniaMNIST
+
+Bộ này rất hợp lý, vì:
+
+* không quá nhiều
+* bám sát đề
+* có cơ sở từ EDA
+* dễ viết phần phân tích
+
+Nếu bạn muốn, bước tiếp theo mình sẽ giúp bạn dựng luôn một **đề cương triển khai chi tiết theo từng file code** như:
+`data.py`, `model.py`, `train.py`, `evaluate.py`, `features.py`, và checklist thí nghiệm để bạn tự code.

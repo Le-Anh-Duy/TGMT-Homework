@@ -1,0 +1,4 @@
+- [ ] tải data
+- [ ] tổ chức dữ liệu + file
+- [ ] phân tích dữ liệu
+- [ ] viết báo cáo
